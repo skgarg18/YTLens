@@ -1,63 +1,71 @@
+
 import TimestampButton from "./TimestampButton";
 import React from "react";
 
+// Supports [[MM:SS]] and [[HH:MM:SS]]
+const TIMESTAMP_REGEX = /\[\[(\d+:\d{2}(?::\d{2})?)\]\]/g;
+
+function parseTimestamp(timestamp) {
+  const parts = timestamp.split(":").map(Number);
+
+  if (parts.length === 2) {
+    const [minutes, seconds] = parts;
+    return minutes * 60 + seconds;
+  }
+
+  if (parts.length === 3) {
+    const [hours, minutes, seconds] = parts;
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+
+  return null;
+}
 
 function formatTimeStamp_Button(text, player) {
+  const parts = text.split(TIMESTAMP_REGEX);
 
-    const regex = /\[\[(\d+(?:\.\d+)?)\]\]/g;
+  return parts.map((part, index) => {
+    const isTimestamp = /^\d+:\d{2}(?::\d{2})?$/.test(part);
 
-    const parts = text.split(regex);
+    if (isTimestamp) {
+      return (
+        <TimestampButton
+          key={index}
+          time={parseTimestamp(part)}
+          displayTime={part}
+          player={player}
+        />
+      );
+    }
 
-    return parts.map((part, index) => {
-
-        if (/^\d+(?:\.\d+)?$/.test(part)) {
-
-            return (
-                <TimestampButton
-                    key={index}
-                    time={part}
-                    player={player}
-                />
-            );
-        }
-
-        return part;
-
-    });
+    return part;
+  });
 }
 
+function processChildren(children, player) {
+  return React.Children.map(children, (child) => {
+    if (typeof child === "string") {
+      return formatTimeStamp_Button(child, player);
+    }
 
-function TimeStampRenderer({ children, Tag , player }) {
+    if (React.isValidElement(child)) {
+      return React.cloneElement(
+        child,
+        {},
+        processChildren(child.props.children, player)
+      );
+    }
 
-    const childArray = React.Children.toArray(children);
-
-                return (
-                  <Tag>
-                    {
-                      childArray.map((child, i) => {
-
-                        if (typeof child === "string") {
-
-                          return (
-                            <span key={i}>
-                              {
-                                formatTimeStamp_Button(
-                                  child,
-                                  player
-                                )
-                              }
-                            </span>
-                          );
-                        }
-
-                        return child;
-                      })
-                    }
-                  </Tag>
-                );
-
-
+    return child;
+  });
 }
 
+function TimeStampRenderer({ children, Tag, player }) {
+  return (
+    <Tag>
+      {processChildren(children, player)}
+    </Tag>
+  );
+}
 
 export default TimeStampRenderer;

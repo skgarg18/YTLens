@@ -9,6 +9,6 @@ class LLMModel:
     def get_llm(cls):
         if cls._instance is None:
             cls._instance = ChatGroq(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
         )   
         return cls._instance
